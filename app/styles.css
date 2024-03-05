@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+a.transitioning .pokemon-item__sprite,
+.pokemon__sprites {
+  view-transition-name: sprite_move;
+}
+
+a.transitioning .pokemon-item__name,
+.pokemon__name {
+  view-transition-name: name_move;
+}
+
+::view-transition-old(sprite_move):not(:only-child),
+::view-transition-new(sprite_move):not(:only-child) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(sprite_name):not(:only-child),
+::view-transition-new(sprite_name):not(:only-child) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
