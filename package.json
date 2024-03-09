@@ -4,10 +4,10 @@
   "sideEffects": false,
   "type": "module",
   "scripts": {
-    "build": "remix build",
+    "build": "remix vite:build && cp ./.pokemon ./build/server",
     "deploy": "fly deploy --remote-only",
-    "dev": "remix dev",
-    "start": "remix-serve ./build/index.js",
+    "dev": "remix vite:dev",
+    "start": "remix-serve ./build/server/index.js",
     "typecheck": "tsc"
   },
   "dependencies": {
@@ -19,7 +19,9 @@
     "pokedex-promise-v2": "^4.1.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-icons": "^4.11.0"
+    "react-icons": "^4.11.0",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
     "@remix-run/dev": "2.8.0",
@@ -32,7 +34,8 @@
     "eslint-config-prxg22": "^1.0.0",
     "postcss": "^8.4.31",
     "tailwindcss": "^3.3.3",
-    "typescript": "^5.1.6"
+    "typescript": "^5.1.6",
+    "vite": "^5.1.5"
   },
   "engines": {
     "node": ">=18.0.0"

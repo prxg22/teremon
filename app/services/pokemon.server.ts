@@ -1,56 +1,27 @@
-import fs from 'fs/promises'
-
-import PokeAPI from 'pokedex-promise-v2'
-const pokedex = new PokeAPI()
+import * as pokemonRepository from '../infra/repository/pokemon'
 
 export const list = async (options?: { limit?: number; offset?: number }) => {
-  const response = await pokedex.getPokemonsList(options)
+  const pokemons = await pokemonRepository.getAll(options)
 
-  const likes = await getLikes()
-  const pokemons = response.results.map((pokemon, index) => ({
-    ...pokemon,
-    id: index + 1,
-    like: likes.includes(index + 1),
-  }))
-
-  return {
-    count: response.count,
-    pokemons,
-  }
+  return pokemons
 }
 
-export const get = async (name?: string) => {
-  if (!name) throw new Error('Pokemon name is required')
-  const pokemon = await pokedex.getPokemonByName(name)
+export const get = async (id?: number) => {
+  if (!id) throw new Error('Pokemon name is required')
 
-  if (!pokemon) throw new Error('Pokemon not found')
+  const pokemons = await pokemonRepository.get(id)
 
-  const likes = await getLikes()
-
-  return { ...pokemon, like: likes.includes(pokemon.id) }
-}
-
-export const getLikes = async () => {
-  const likes = await fs.readFile('pokemon.json')
-
-  if (!likes) return []
-
-  return JSON.parse(likes.toString()) as number[]
+  return pokemons
 }
 
 export const toogleLike = async (id: number) => {
-  console.log('toogleLike', id)
-  const likes = await getLikes()
+  if (!id) throw new Error('Pokemon id is required')
 
-  const newLikes = likes.includes(id)
-    ? likes.filter((like) => like !== id)
-    : [...likes, id]
+  const pokemon = await pokemonRepository.get(id)
 
-  await fs.writeFile('pokemon.json', JSON.stringify(newLikes))
-}
+  pokemon.like = !pokemon.like
 
-export const isLiked = async (id: number) => {
-  const likes = await getLikes()
+  await pokemonRepository.update(pokemon)
 
-  return likes.includes(id)
+  return pokemon
 }

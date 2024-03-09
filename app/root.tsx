@@ -1,37 +1,34 @@
-import { cssBundleHref } from '@remix-run/css-bundle'
-import type { LinksFunction } from '@remix-run/node'
 import {
   Links,
-  LiveReload,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
 } from '@remix-run/react'
 
-import fonts from './fonts.css'
-import styles from './styles.css'
-
-export const links: LinksFunction = () => [
-  ...(cssBundleHref ? [{ rel: 'stylesheet', href: cssBundleHref }] : []),
-  { rel: 'stylesheet', href: fonts },
-  { rel: 'stylesheet', href: styles },
-]
+import './fonts.css'
+import './styles.css'
 
 export default function App() {
   return (
     <html lang="en">
-      <head>
+      <head className="flex flex-col m-0 p-0">
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
       </head>
-      <body className="min-h-screen flex flex-col bg-gradient-to-tr from-gray-50 to-zinc-100 text-zinc-900 font-sans">
+      <body className="flex flex-col m-0 p-0">
         <Outlet />
-        <ScrollRestoration />
+        <ScrollRestoration
+          getKey={(location, matches) => {
+            if (location.pathname.match(/^\/pokemon\/?$/i)) {
+              return location.pathname
+            }
+            return location.key
+          }}
+        />
         <Scripts />
-        <LiveReload />
       </body>
     </html>
   )

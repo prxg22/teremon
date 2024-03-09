@@ -2,3 +2,8 @@
   font-family: "PokemonGB";
   src: url(/fonts/PokemonGb.ttf) format("truetype");
 }
+
+@font-face {
+  font-family: "Dolpino";
+  src: url(/fonts/Dolpino.ttf) format("truetype");
+}

@@ -1,6 +1,6 @@
 import type { LoaderFunctionArgs } from '@remix-run/node'
 import { redirect } from '@remix-run/node'
-import { Form, Link, useLoaderData, useNavigate } from '@remix-run/react'
+import { Form, Link, useLoaderData } from '@remix-run/react'
 
 import { get, toogleLike } from '../services/pokemon.server'
 
@@ -8,9 +8,9 @@ export const loader = async (loaderArgs: LoaderFunctionArgs) => {
   const { params } = loaderArgs
   const { pokemonId } = params
 
-  if (!pokemonId) redirect('/pokemon')
+  if (!pokemonId) return redirect('/pokemon')
 
-  const pokemon = await get(pokemonId)
+  const pokemon = await get(Number(pokemonId))
 
   return { pokemon }
 }
@@ -24,17 +24,13 @@ export const action = async ({ params }: LoaderFunctionArgs) => {
   return null
 }
 const PokemonPage = () => {
-  const navigate = useNavigate()
   const loaderData = useLoaderData<typeof loader>()
   return (
-    <div className="flex-1 flex flex-col overflow p-2 bg-gradient-to-br from-pink-500 via-purple-500 to-green-500 rounded-md animate-glowing">
+    <div className="flex-1 flex flex-col">
       <header className="flex self-stretch mb-3 ">
         <Link
-          to="#"
-          onClick={(event) => {
-            event.preventDefault()
-            navigate(-1)
-          }}
+          to="/pokemon"
+          unstable_viewTransition
           className="bg-purple-600 text-white p-2 rounded-full w-[32px] h-[32px] text-sm drop-shadow-lg"
         >
           ⬅
@@ -42,7 +38,10 @@ const PokemonPage = () => {
       </header>
       <section className="flex gap-4">
         <img
-          src={loaderData.pokemon.sprites.front_default || ''}
+          src={
+            `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${loaderData.pokemon.id}.png` ||
+            ''
+          }
           alt={loaderData.pokemon.name}
           className="pokemon__sprites w-[150px] p-1 border-2 bg-gray-50 border-zinc-900 rounded-md flex items-center justify-center "
         />
