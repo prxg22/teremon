@@ -9,9 +9,9 @@ export const list = async (options?: { limit?: number; offset?: number }) => {
 export const get = async (id?: number) => {
   if (!id) throw new Error('Pokemon name is required')
 
-  const pokemons = await pokemonRepository.get(id)
+  const pokemon = await pokemonRepository.get(id)
 
-  return pokemons
+  return pokemon
 }
 
 export const toogleLike = async (id: number) => {

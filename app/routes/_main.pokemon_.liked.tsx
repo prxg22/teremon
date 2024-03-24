@@ -3,23 +3,12 @@ import { json } from '@remix-run/node'
 import { Link, useLoaderData } from '@remix-run/react'
 
 import { PokemonCard } from '../components/PokemonCard'
-import { list } from '../services/pokemon.server'
+import { getAll } from '../infra/repository/pokemon'
 
 export const loader = async (loaderArgs: LoaderFunctionArgs) => {
-  const url = new URL(loaderArgs.request.url)
-  const offset = Number(url.searchParams.get('offset')) || 0
+  const pokemons = await getAll({ filter: { liked: true } })
 
-  const params = {
-    offset,
-    limit: 1025,
-  }
-  const pokemons = await list(params)
-
-  return json({
-    pokemons: pokemons.filter((pokemon) => {
-      return pokemon.like
-    }),
-  })
+  return json({ pokemons })
 }
 
 const Index = () => {

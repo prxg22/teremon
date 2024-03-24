@@ -24,12 +24,11 @@ const Index = () => {
   return (
     <>
       <div className="p-4 flex justify-center">
-        <ul className="grid xl:lg:grid-cols-6 md:sm:grid-cols-3 grid-cols-2 gap-4 p-4">
+        <ul className="grid xl:lg:grid-cols-6 md:sm:grid-cols-3 grid-cols-2 gap-6 p-4">
           {loaderData.pokemons.map((pokemon) => (
             <li key={pokemon.name}>
               <NavLink
                 to={`/pokemon/${pokemon.id}`}
-                className="flex flex-col gap-2 items-center text-center bg-transparent drop-shadow-sm"
                 unstable_viewTransition
                 prefetch="intent"
               >

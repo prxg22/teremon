@@ -5,6 +5,8 @@ import { connect } from '../db'
 
 let db: Awaited<ReturnType<typeof connect>>
 
+type DBPokemon = Omit<Pokemon, 'types'> & { types: string; evolutions: string }
+
 export const connectDB = async () => {
   const { DATABASE_URL } = process.env
 
@@ -26,7 +28,7 @@ export const connectDB = async () => {
 
 await connectDB()
 
-const createPokemonTable = async () => {
+export const createPokemonTable = async () => {
   await connectDB()
 
   // create pokemon table
@@ -37,7 +39,7 @@ const createPokemonTable = async () => {
   )`)
 }
 
-const insertPokemon = async (pokemon: Pokemon) => {
+export const insertPokemon = async (pokemon: Pokemon) => {
   await connectDB()
 
   const result = await db.get('SELECT * FROM pokemon WHERE id = ?', pokemon.id)
@@ -52,7 +54,18 @@ const insertPokemon = async (pokemon: Pokemon) => {
   }
 }
 
-const createTypeTable = async () => {
+export const createEvolutionsTable = async () => {
+  await connectDB()
+
+  await db.run(`CREATE TABLE IF NOT EXISTS pokemon_evolutions (
+    pokemon_id INTEGER NOT NULL,
+    evolution_id INTEGER NOT NULL,
+    FOREIGN KEY (pokemon_id) REFERENCES pokemon(id),
+    FOREIGN KEY (evolution_id) REFERENCES pokemon(id),
+    PRIMARY KEY (pokemon_id, evolution_id)
+  )`)
+}
+export const createTypeTable = async () => {
   await connectDB()
 
   // create type table
@@ -62,7 +75,7 @@ const createTypeTable = async () => {
   )`)
 }
 
-const createPokemonTypeTable = async () => {
+export const createPokemonTypeTable = async () => {
   await connectDB()
 
   await db.run(`CREATE TABLE IF NOT EXISTS pokemon_type ( 
@@ -75,7 +88,7 @@ const createPokemonTypeTable = async () => {
   `)
 }
 
-const insertType = async (type: Type): Promise<Type> => {
+export const insertType = async (type: Type): Promise<Type> => {
   await connectDB()
 
   let result = await db.get<Type>(
@@ -98,7 +111,7 @@ const insertType = async (type: Type): Promise<Type> => {
   return result
 }
 
-const insertPokemonType = async (pokemonId: number, typeId: number) => {
+export const insertPokemonType = async (pokemonId: number, typeId: number) => {
   await connectDB()
   const pokemonType = await db.get(
     `SELECT * FROM pokemon_type WHERE pokemon_id = ? AND type_id = ?`,
@@ -114,31 +127,37 @@ const insertPokemonType = async (pokemonId: number, typeId: number) => {
   )
 }
 
-export const seed = async (seed?: { pokemons?: Pokemon[] }) => {
+export const insertPokemonEvolutions = async (
+  pokemonId: number,
+  evolutionId: number,
+) => {
   await connectDB()
 
-  await Promise.all([
-    createPokemonTable(),
-    createTypeTable(),
-    createPokemonTypeTable(),
-  ])
+  const evolution = await db.get(
+    `SELECT * FROM pokemon_evolutions WHERE pokemon_id = ? AND evolution_id = ?`,
+    pokemonId,
+    evolutionId,
+  )
 
-  if (!seed?.pokemons?.length) return
+  if (evolution) return
 
-  for (const pokemon of seed.pokemons) {
-    await insertPokemon(pokemon)
-    for (const t of pokemon.types) {
-      const type = await insertType(t)
-      await insertPokemonType(pokemon.id, type.id)
-    }
-  }
+  await db.run(
+    'INSERT INTO pokemon_evolutions (pokemon_id, evolution_id) VALUES (?, ?)',
+    pokemonId,
+    evolutionId,
+  )
 }
 
-export const getAll = async (options?: { limit?: number; offset?: number }) => {
+export const getAll = async (options?: {
+  filter?: { liked?: boolean }
+  limit?: number
+  offset?: number
+}) => {
   await connectDB()
 
   const { limit = 20, offset = 0 } = options || {}
-  const results = await db.all<(Omit<Pokemon, 'types'> & { types: string })[]>(
+  const whereClause = options?.filter?.liked ? 'WHERE like = 1' : ''
+  const results = await db.all<DBPokemon[]>(
     `SELECT 
       pokemon.id, 
       pokemon.name, 
@@ -151,6 +170,7 @@ export const getAll = async (options?: { limit?: number; offset?: number }) => {
       ON pokemon.id = pokemon_type.pokemon_id
     JOIN type 
       ON pokemon_type.type_id = type.id
+    ${whereClause}
     GROUP BY pokemon.id, pokemon.name, pokemon.like
     LIMIT ? OFFSET ?`,
     limit,
@@ -158,35 +178,61 @@ export const getAll = async (options?: { limit?: number; offset?: number }) => {
   )
 
   const pokemons = results.map((pokemon) => {
-    return { ...pokemon, types: JSON.parse(pokemon.types) as TypeInfo[] }
+    return {
+      ...pokemon,
+      types: JSON.parse(pokemon.types) as TypeInfo[],
+    }
   })
 
-  return pokemons as Pokemon[]
+  return pokemons
 }
 
-export const get = async (id: number) => {
+export const get = async (id: number): Promise<Pokemon> => {
   await connectDB()
 
-  const pokemon = await db.get(
+  const pokemon = await db.get<DBPokemon>(
     `SELECT 
       pokemon.id, 
       pokemon.name, 
       pokemon.like, 
       json_group_array(
         json_object('id', type.id, 'name', type.name)
-        ) as types
+      ) as types,
+      CASE 
+        WHEN pokemon_evolutions.pokemon_id IS NULL THEN '[]' 
+      ELSE
+        json_group_array(
+          pokemon_evolutions.evolution_id
+        ) 
+      END as evolutions
     FROM pokemon 
     JOIN pokemon_type 
       ON pokemon.id = pokemon_type.pokemon_id
     JOIN type 
       ON pokemon_type.type_id = type.id
+    LEFT JOIN pokemon_evolutions
+      ON pokemon.id = pokemon_evolutions.pokemon_id
     WHERE pokemon.id = ?
     GROUP BY pokemon.id, pokemon.name, pokemon.like
   `,
     id,
   )
 
-  return pokemon as Pokemon
+  if (!pokemon) throw Error('Pokemon not found')
+
+  // const ids = JSON.parse(pokemon.evolutions) as number[]
+
+  // const evolutions = await Promise.all(
+  //   ids.map((id) => {
+  //     return get(id)
+  //   }),
+  // )
+
+  return {
+    ...pokemon,
+    types: JSON.parse(pokemon.types) as TypeInfo[],
+    // evolutions,
+  }
 }
 
 export const update = async (pokemon: Pokemon) => {

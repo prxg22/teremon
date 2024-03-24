@@ -1,66 +1,90 @@
-import fs from 'fs'
+import fs from 'fs/promises'
 
-import PokeAPI from 'pokedex-promise-v2'
-
-import { seed } from '../app/infra/repository/pokemon'
+import {
+  connectDB,
+  createEvolutionsTable,
+  createPokemonTable,
+  createPokemonTypeTable,
+  createTypeTable,
+  insertPokemon,
+  insertPokemonEvolutions,
+  insertPokemonType,
+  insertType,
+} from '../app/infra/repository/pokemon'
 import type { Pokemon } from '../app/models/Pokemon'
 
-const pokedex = new PokeAPI()
+import type { DumpedPokemon } from './scrapper'
 
-const runSeed = async () => {
+const dumpDir = './scripts/.dump'
+export const seed = async (seed?: { pokemons?: Pokemon[] }) => {
+  await connectDB()
+
+  await Promise.all([
+    createPokemonTable(),
+    createTypeTable(),
+    createPokemonTypeTable(),
+    createEvolutionsTable(),
+  ])
+
+  if (!seed?.pokemons?.length) return
+
+  for (const pokemon of seed.pokemons) {
+    await insertPokemon(pokemon)
+    for (const t of pokemon.types) {
+      const type = await insertType(t)
+      await insertPokemonType(pokemon.id, type.id)
+    }
+    for (const e of pokemon.evolutions) {
+      if (e?.id && e.id !== pokemon.id && e.id <= 1025)
+        await insertPokemonEvolutions(e.id, pokemon.id)
+    }
+  }
+}
+
+const parsePokemon = (pokemon: DumpedPokemon): Pokemon => {
+  return {
+    id: pokemon.id,
+    name: pokemon.name,
+    like: pokemon.like,
+    types: pokemon.types.map(({ slot, type }) => ({
+      id: slot,
+      name: type.name,
+    })),
+    evolutions:
+      pokemon.evolutions?.map((id) => ({
+        id,
+      })) || [],
+  }
+}
+
+const getPokemonFromDump = async () => {
+  const dumps = await fs.readdir(dumpDir)
+
+  if (!dumps.length) {
+    throw new Error('No dump file found')
+  }
+
+  const pokemons: DumpedPokemon[] = []
+  for (const dump of dumps) {
+    const dumpFile = await fs.readFile(`${dumpDir}/${dump}`, 'utf-8')
+
+    pokemons.push(...JSON.parse(dumpFile))
+  }
+
+  return pokemons.map(parsePokemon)
+}
+
+const run = async () => {
   const pokemons = await getPokemonFromDump()
 
   await seed({ pokemons })
 }
 
-const runScrapper = async (options: { offset: number; limit: number }) => {
-  const pokemons = await getPokemonFromAPI(options)
-
-  fs.writeFileSync('pokemon-dump.json', JSON.stringify(pokemons, null, 2))
-}
-
-const createPokemon = (pokemon: PokeAPI.Pokemon): Pokemon => {
-  return {
-    id: pokemon.id,
-    name: pokemon.name,
-    like: false,
-    types: pokemon.types.map(({ slot, type }) => ({
-      id: slot,
-      name: type.name,
-    })),
-  }
-}
-
-const getPokemonFromAPI = async (options: {
-  offset: number
-  limit: number
-}) => {
-  let { results } = await pokedex.getPokemonsList({
-    cacheLimit: 20000,
-    limit: options.limit,
-    offset: options.offset,
-  })
-
-  const pokemons = await Promise.all(
-    results.map(async ({ name }) => {
-      return pokedex.getPokemonByName(name)
-    }),
-  )
-
-  return pokemons
-}
-
-const getPokemonFromDump = async () => {
-  const { default: pokemon } = await import('../pokemon-dump.json')
-
-  return (pokemon as PokeAPI.Pokemon[]).map(createPokemon)
-}
-
-runSeed()
-  // runScrapper({
-  //   offset: 1000,
-  //   limit: 25,
-  // })
+run()
   .then(() => {
     process.exit(0)
+  })
+  .catch((err) => {
+    console.error(err)
+    process.exit(1)
   })

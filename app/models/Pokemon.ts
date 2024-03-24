@@ -20,4 +20,5 @@ export type Pokemon = {
   name: string
   like: boolean
   types: TypeInfo[]
+  evolutions: Partial<Pokemon>[]
 }
