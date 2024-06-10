@@ -2,8 +2,13 @@ import type { LoaderFunctionArgs } from '@remix-run/node'
 import { redirect } from '@remix-run/node'
 import { Form, Link, useLoaderData } from '@remix-run/react'
 
-import { get, toogleLike } from '../services/pokemon.server'
+import {
+  getEvolutionChain,
+  getPokemon,
+  toogleLike,
+} from '../services/pokemon.server'
 
+import { PokemonCard } from '~/components/PokemonCard'
 import { derivateColorFromTypes } from '~/utils'
 
 export const loader = async (loaderArgs: LoaderFunctionArgs) => {
@@ -12,9 +17,12 @@ export const loader = async (loaderArgs: LoaderFunctionArgs) => {
 
   if (!pokemonId) return redirect('/pokemon')
 
-  const pokemon = await get(Number(pokemonId))
+  const [pokemon, evolutionChain] = await Promise.all([
+    getPokemon(Number(pokemonId)),
+    getEvolutionChain(Number(pokemonId)),
+  ])
 
-  return { pokemon }
+  return { pokemon, evolutionChain }
 }
 
 export const action = async ({ params }: LoaderFunctionArgs) => {
@@ -33,32 +41,56 @@ const PokemonPage = () => {
     ? '/pokeball-c-icon.png'
     : '/pokeball-b-icon.png'
 
-  const prefetchers = Array.from({ length: 10 }, (_, i) => {
-    if (i <= 5 && i > 1) {
-      return (
-        <link
-          rel="prefetch"
-          href={`/sprites/${loaderData.pokemon.id - i}.png`}
-          key={`prefetch-${i}`}
-        />
-      )
-    }
+  const prefetchers = Array.from({ length: 20 }, (_, i) => {
+    const href1 =
+      loaderData.pokemon.id - i > 0
+        ? `/sprites/${loaderData.pokemon.id - i}.png`
+        : ''
+    const href2 =
+      loaderData.pokemon.id + i < 1025
+        ? `/sprites/${loaderData.pokemon.id + i}.png`
+        : ''
 
-    if (i > 5) {
-      return (
-        <link
-          rel="prefetch"
-          href={`/sprites/${loaderData.pokemon.id + i}.png`}
-          key={`prefetch-${i}`}
-        />
-      )
-    }
-
-    return null
+    return (
+      <>
+        {href1 && (
+          <link
+            key={`prefetch-${i - loaderData.pokemon.id}`}
+            rel="prefetch"
+            href={href1}
+            as="image"
+            crossOrigin="anonymous"
+          />
+        )}
+        {href2 && (
+          <link
+            key={`prefetch-${i + loaderData.pokemon.id}`}
+            rel="prefetch"
+            href={href2}
+            as="image"
+            crossOrigin="anonymous"
+          />
+        )}
+      </>
+    )
   })
 
+  const stages = loaderData.evolutionChain.reduce(
+    (acc, curr) => {
+      if (acc[curr.stage]) {
+        acc[curr.stage].push(curr)
+      } else {
+        acc[curr.stage] = [curr]
+      }
+      return acc
+    },
+    {} as Record<number, typeof loaderData.evolutionChain>,
+  )
+
   return (
-    <div className={`flex-1 flex flex-col bg-gradient-to-br ${color}`}>
+    <div
+      className={`flex-1 flex flex-col bg-gradient-to-br ${color} p-2 sm:p-4 items-center`}
+    >
       <header className="flex self-stretch mb-3 ">
         <Link
           to="/pokemon"
@@ -74,7 +106,11 @@ const PokemonPage = () => {
           <h1 className="pokemon__name text-5xl">{loaderData.pokemon.name}</h1>
           <Form action={`/pokemon/${loaderData.pokemon.id}`} method="post">
             <button onClick={(e) => e.stopPropagation()}>
-              <img src={iconSrc} alt="like" className="w-7 h-7" />
+              <img
+                src={iconSrc}
+                alt="like"
+                className="pokemon__like-button w-8 h-8"
+              />
             </button>
           </Form>
         </div>
@@ -83,6 +119,18 @@ const PokemonPage = () => {
           alt={loaderData.pokemon.name}
           className="pokemon__sprites w-[300px] p-1 rounded-md flex items-center justify-self-center"
         />
+      </section>
+
+      <section className="grid grid-flow-col gap-4 max-w-[75%] justify-center">
+        {Object.entries(stages).map(([stage, pokemons]) => (
+          <div key={stage} className="flex flex-col gap-4">
+            {pokemons.map((pokemon) => (
+              <Link to={`/pokemon/${pokemon.id}`} key={'ev-' + pokemon.id}>
+                <PokemonCard pokemon={pokemon} />
+              </Link>
+            ))}
+          </div>
+        ))}
       </section>
       {prefetchers}
     </div>

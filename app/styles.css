@@ -13,6 +13,11 @@
     view-transition-name: name_move;
   }
 
+  a.transitioning .pokemon-item__like-button,
+  .pokemon__like-button {
+    view-transition-name: like_button_move;
+  }
+
   ::view-transition-old(sprite_move):not(:only-child),
   ::view-transition-new(sprite_move):not(:only-child) {
     animation: none;
@@ -21,6 +26,18 @@
 
   ::view-transition-old(sprite_name):not(:only-child),
   ::view-transition-new(sprite_name):not(:only-child) {
+    animation: none;
+    mix-blend-mode: normal;
+  }
+
+  ::view-transition-old(sprite_name):not(:only-child),
+  ::view-transition-new(sprite_name):not(:only-child) {
+    animation: none;
+    mix-blend-mode: normal;
+  }
+
+  ::view-transition-old(like_button_move):not(:only-child),
+  ::view-transition-new(like_button_move):not(:only-child) {
     animation: none;
     mix-blend-mode: normal;
   }

@@ -2,12 +2,12 @@ import fs from 'fs/promises'
 
 import {
   connectDB,
-  createEvolutionsTable,
+  createEvolutionTable,
   createPokemonTable,
   createPokemonTypeTable,
   createTypeTable,
   insertPokemon,
-  insertPokemonEvolutions,
+  insertPokemonInEvolutionChain,
   insertPokemonType,
   insertType,
 } from '../app/infra/repository/pokemon'
@@ -15,15 +15,16 @@ import type { Pokemon } from '../app/models/Pokemon'
 
 import type { DumpedPokemon } from './scrapper'
 
-const dumpDir = './scripts/.dump'
-export const seed = async (seed?: { pokemons?: Pokemon[] }) => {
+const mode = process.argv[2] // 'pokemon' | 'evoultion
+const path = process.argv[3] ?? './scripts/.dump/' + mode
+
+export const seedPokemon = async (seed?: { pokemons?: Pokemon[] }) => {
   await connectDB()
 
   await Promise.all([
     createPokemonTable(),
     createTypeTable(),
     createPokemonTypeTable(),
-    createEvolutionsTable(),
   ])
 
   if (!seed?.pokemons?.length) return
@@ -34,9 +35,21 @@ export const seed = async (seed?: { pokemons?: Pokemon[] }) => {
       const type = await insertType(t)
       await insertPokemonType(pokemon.id, type.id)
     }
-    for (const e of pokemon.evolutions) {
-      if (e?.id && e.id !== pokemon.id && e.id <= 1025)
-        await insertPokemonEvolutions(e.id, pokemon.id)
+  }
+}
+
+export const seedEvolution = async (seed?: {
+  evolutions?: { chainId: number; stage: number; pokemonId: number }[][]
+}) => {
+  await connectDB()
+
+  await createEvolutionTable()
+
+  if (!seed?.evolutions?.length) return
+
+  for (const chain of seed.evolutions) {
+    for (const evo of chain) {
+      await insertPokemonInEvolutionChain(evo)
     }
   }
 }
@@ -50,15 +63,11 @@ const parsePokemon = (pokemon: DumpedPokemon): Pokemon => {
       id: slot,
       name: type.name,
     })),
-    evolutions:
-      pokemon.evolutions?.map((id) => ({
-        id,
-      })) || [],
   }
 }
 
 const getPokemonFromDump = async () => {
-  const dumps = await fs.readdir(dumpDir)
+  const dumps = await fs.readdir(path)
 
   if (!dumps.length) {
     throw new Error('No dump file found')
@@ -66,7 +75,7 @@ const getPokemonFromDump = async () => {
 
   const pokemons: DumpedPokemon[] = []
   for (const dump of dumps) {
-    const dumpFile = await fs.readFile(`${dumpDir}/${dump}`, 'utf-8')
+    const dumpFile = await fs.readFile(`${path}/${dump}`, 'utf-8')
 
     pokemons.push(...JSON.parse(dumpFile))
   }
@@ -74,10 +83,37 @@ const getPokemonFromDump = async () => {
   return pokemons.map(parsePokemon)
 }
 
-const run = async () => {
-  const pokemons = await getPokemonFromDump()
+const getEvolutionsFromDump = async () => {
+  const dumps = await fs.readdir(path)
 
-  await seed({ pokemons })
+  if (!dumps.length) {
+    throw new Error('No dump file found')
+  }
+
+  const evolutions = []
+  for (const dump of dumps) {
+    const dumpFile = await fs.readFile(`${path}/${dump}`, 'utf-8')
+
+    evolutions.push(...JSON.parse(dumpFile))
+  }
+
+  return evolutions
+}
+
+const run = async () => {
+  if (mode === 'pokemon') {
+    const pokemons = await getPokemonFromDump()
+
+    return seedPokemon({ pokemons })
+  }
+
+  if (mode === 'evolution') {
+    const evolutions = await getEvolutionsFromDump()
+
+    return seedEvolution({ evolutions })
+  }
+
+  throw new Error(`Invalid mode. Use 'pokemon' or 'evolution'`)
 }
 
 run()

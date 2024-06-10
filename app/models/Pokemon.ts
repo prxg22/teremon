@@ -1,13 +1,6 @@
-// export type TypeRelation = {
-//   id: number
-//   name: string
-//   relation: string
-// }
-
 export type Type = {
   id: number
   name: string
-  // relations?: TypeRelation[]
 }
 
 export type TypeInfo = {
@@ -20,5 +13,4 @@ export type Pokemon = {
   name: string
   like: boolean
   types: TypeInfo[]
-  evolutions: Partial<Pokemon>[]
 }

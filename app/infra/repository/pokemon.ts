@@ -5,7 +5,11 @@ import { connect } from '../db'
 
 let db: Awaited<ReturnType<typeof connect>>
 
-type DBPokemon = Omit<Pokemon, 'types'> & { types: string; evolutions: string }
+type DBPokemon = Omit<Pokemon, 'types'> & {
+  types: string
+  evolutions_to: string
+  evolutions_from: string
+}
 
 export const connectDB = async () => {
   const { DATABASE_URL } = process.env
@@ -26,8 +30,6 @@ export const connectDB = async () => {
   }
 }
 
-await connectDB()
-
 export const createPokemonTable = async () => {
   await connectDB()
 
@@ -39,32 +41,18 @@ export const createPokemonTable = async () => {
   )`)
 }
 
-export const insertPokemon = async (pokemon: Pokemon) => {
+export const createEvolutionTable = async () => {
   await connectDB()
 
-  const result = await db.get('SELECT * FROM pokemon WHERE id = ?', pokemon.id)
-
-  if (!result) {
-    await db.run(
-      'INSERT INTO pokemon (id, name, like) VALUES (?, ?, ?)',
-      pokemon.id,
-      pokemon.name,
-      pokemon.like,
-    )
-  }
-}
-
-export const createEvolutionsTable = async () => {
-  await connectDB()
-
-  await db.run(`CREATE TABLE IF NOT EXISTS pokemon_evolutions (
-    pokemon_id INTEGER NOT NULL,
-    evolution_id INTEGER NOT NULL,
+  await db.run(`CREATE TABLE IF NOT EXISTS evolutions (
+    pokemon_id  INTEGER NOT NULL,
+    chain_id    INTEGER NOT NULL,
+    stage       INTEGER NOT NULL,
     FOREIGN KEY (pokemon_id) REFERENCES pokemon(id),
-    FOREIGN KEY (evolution_id) REFERENCES pokemon(id),
-    PRIMARY KEY (pokemon_id, evolution_id)
+    PRIMARY KEY (pokemon_id, chain_id)
   )`)
 }
+
 export const createTypeTable = async () => {
   await connectDB()
 
@@ -86,6 +74,21 @@ export const createPokemonTypeTable = async () => {
     PRIMARY KEY (pokemon_id, type_id)
   )
   `)
+}
+
+export const insertPokemon = async (pokemon: Pokemon) => {
+  await connectDB()
+
+  const result = await db.get('SELECT * FROM pokemon WHERE id = ?', pokemon.id)
+
+  if (!result) {
+    await db.run(
+      'INSERT INTO pokemon (id, name, like) VALUES (?, ?, ?)',
+      pokemon.id,
+      pokemon.name,
+      pokemon.like,
+    )
+  }
 }
 
 export const insertType = async (type: Type): Promise<Type> => {
@@ -127,24 +130,26 @@ export const insertPokemonType = async (pokemonId: number, typeId: number) => {
   )
 }
 
-export const insertPokemonEvolutions = async (
-  pokemonId: number,
-  evolutionId: number,
-) => {
+export const insertPokemonInEvolutionChain = async (params: {
+  pokemonId: number
+  chainId?: number
+  stage: number
+}) => {
   await connectDB()
 
   const evolution = await db.get(
-    `SELECT * FROM pokemon_evolutions WHERE pokemon_id = ? AND evolution_id = ?`,
-    pokemonId,
-    evolutionId,
+    `SELECT * FROM evolutions WHERE pokemon_id = ? AND chain_id = ?`,
+    params.pokemonId,
+    params.chainId,
   )
 
   if (evolution) return
 
   await db.run(
-    'INSERT INTO pokemon_evolutions (pokemon_id, evolution_id) VALUES (?, ?)',
-    pokemonId,
-    evolutionId,
+    'INSERT INTO evolutions (pokemon_id, chain_id, stage) VALUES (?, ?, ?)',
+    params.pokemonId,
+    params.chainId,
+    params.stage,
   )
 }
 
@@ -190,48 +195,90 @@ export const getAll = async (options?: {
 export const get = async (id: number): Promise<Pokemon> => {
   await connectDB()
 
-  const pokemon = await db.get<DBPokemon>(
-    `SELECT 
-      pokemon.id, 
-      pokemon.name, 
-      pokemon.like, 
-      json_group_array(
-        json_object('id', type.id, 'name', type.name)
-      ) as types,
-      CASE 
-        WHEN pokemon_evolutions.pokemon_id IS NULL THEN '[]' 
-      ELSE
+  try {
+    const data = await db.get<DBPokemon>(
+      `SELECT 
+        pokemon.id, 
+        pokemon.name, 
+        pokemon.like, 
         json_group_array(
-          pokemon_evolutions.evolution_id
-        ) 
-      END as evolutions
-    FROM pokemon 
-    JOIN pokemon_type 
-      ON pokemon.id = pokemon_type.pokemon_id
-    JOIN type 
-      ON pokemon_type.type_id = type.id
-    LEFT JOIN pokemon_evolutions
-      ON pokemon.id = pokemon_evolutions.pokemon_id
-    WHERE pokemon.id = ?
-    GROUP BY pokemon.id, pokemon.name, pokemon.like
-  `,
-    id,
-  )
+          json_object('id', type.id, 'name', type.name)
+        ) as types
+      FROM pokemon 
+      JOIN pokemon_type 
+        ON pokemon.id = pokemon_type.pokemon_id
+      JOIN type 
+        ON pokemon_type.type_id = type.id
+      WHERE pokemon.id = ?
+      GROUP BY pokemon.id, pokemon.name, pokemon.like
+    `,
+      id,
+    )
 
-  if (!pokemon) throw Error('Pokemon not found')
+    if (!data) throw Error('Pokemon not found')
 
-  // const ids = JSON.parse(pokemon.evolutions) as number[]
+    return {
+      id: data.id,
+      name: data.name,
+      like: data.like,
+      types: JSON.parse(data.types) as TypeInfo[],
+    }
+  } catch (e) {
+    throw new Error('Error getting pokemon by id', { cause: e })
+  }
+}
 
-  // const evolutions = await Promise.all(
-  //   ids.map((id) => {
-  //     return get(id)
-  //   }),
-  // )
+export const getEvolutionChainByPokemonId = async (id: number) => {
+  await connectDB()
 
-  return {
-    ...pokemon,
-    types: JSON.parse(pokemon.types) as TypeInfo[],
-    // evolutions,
+  try {
+    const chain = await db.all<
+      {
+        chainId: number
+        stage: number
+        pokemon_id: number
+        name: string
+        types: string
+        like: boolean
+      }[]
+    >(
+      `SELECT 
+        evolutions.pokemon_id, 
+        evolutions.chain_id, 
+        evolutions.stage, 
+        pokemon.name,
+        pokemon.like,
+        (
+          SELECT json_group_array(
+            json_object('id', type.id, 'name', type.name)
+          ) as types
+          FROM pokemon_type 
+          JOIN type 
+            ON pokemon_type.type_id = type.id
+          WHERE pokemon_type.pokemon_id = evolutions.pokemon_id
+          GROUP BY pokemon_type.pokemon_id
+        ) as types
+      FROM evolutions 
+      JOIN pokemon 
+        ON evolutions.pokemon_id = pokemon.id
+      WHERE chain_id = (SELECT chain_id FROM evolutions WHERE pokemon_id = ?)
+      ORDER BY stage ASC`,
+      id,
+    )
+
+    return chain.map((pokemon) => {
+      return {
+        id: pokemon.pokemon_id,
+        name: pokemon.name,
+        types: JSON.parse(pokemon.types) as TypeInfo[],
+        stage: pokemon.stage,
+        like: pokemon.like,
+      }
+    })
+  } catch (e) {
+    throw new Error('Error getting evolution chain by pokemon id', {
+      cause: e,
+    })
   }
 }
 
@@ -244,3 +291,5 @@ export const update = async (pokemon: Pokemon) => {
     id,
   )
 }
+
+await connectDB()

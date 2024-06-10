@@ -1,57 +1,50 @@
-import fs from 'fs'
+import fs, { createWriteStream } from 'fs'
 
+import { writeReadableStreamToWritable } from '@remix-run/node'
 import PokeAPI from 'pokedex-promise-v2'
 
 import { getAll } from '../app/infra/repository/pokemon'
 
 const pokedex = new PokeAPI()
 
-const dir = './scripts/.dump'
-
 export interface DumpedPokemon extends PokeAPI.Pokemon {
-  evolutions: number[] | null
   like: boolean
 }
 
-const runScrapper = async (options: { offset: number; limit: number }) => {
+const mode = process.argv[2] // 'pokemon' | 'evoultion' | 'sprite'
+const offset = process.argv[3] ? parseInt(process.argv[3], 10) : 0 // offset
+const limit = process.argv[4] ? parseInt(process.argv[4], 10) : 20 // limit
+const path = process.argv[5] ?? './scripts/.dump/' + mode
+
+const dumpPokemon = async (options: { offset: number; limit: number }) => {
   let pokemons = await getPokemonsFromAPI(options)
 
-  const timestamp = new Date().toISOString().replace(/:/g, '-')
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir)
-  }
-
-  console.log('Dumping pokemons...')
   const likes = await getAll({ filter: { liked: true } })
 
-  pokemons = pokemons.map((p) => ({
+  return pokemons.map((p) => ({
     ...p,
     like: likes.some((l) => l.id === p.id),
   }))
-
-  fs.writeFileSync(
-    `${dir}/${timestamp}.json`,
-    JSON.stringify(pokemons, null, 2),
-  )
-  console.log('Dumped!')
 }
 
-const getSpecieEvolutions = async (name: string): Promise<number[] | null> => {
-  const specie = await pokedex.getPokemonSpeciesByName(name)
+const dumpEvolutions = async (options: { offset: number; limit: number }) => {
+  const chainsList = await pokedex.getEvolutionChainsList({
+    cacheLimit: 20000,
+    limit: options.limit,
+    offset: options.offset,
+  })
 
-  const evolvesFromUrl = specie.evolves_from_species?.url
-  if (!evolvesFromUrl) return null
+  console.log(`Fetched ${chainsList.results.length} evolution chains`)
 
-  const evolvesFrom: PokeAPI.PokemonSpecies =
-    await pokedex.getResource(evolvesFromUrl)
+  const chains = chainsList.results.map(async ({ url }) => {
+    const chain = (await pokedex.getResource(url)) as PokeAPI.EvolutionChain
+    const ec = await unrollEvolutionChain(chain.chain)
+    return ec.map((c) => ({ ...c, chainId: chain.id }))
+  })
 
-  const promises = evolvesFrom.varieties.map((p) =>
-    (pokedex.getResource(p.pokemon.url) as Promise<PokeAPI.Pokemon>).then(
-      (p) => p.id,
-    ),
-  )
+  console.log('Dumping evolutions...')
 
-  return Promise.all(promises)
+  return Promise.all(chains)
 }
 
 const getPokemonsFromAPI = async (options: {
@@ -70,25 +63,125 @@ const getPokemonsFromAPI = async (options: {
     results.map(async (result) => {
       const pokemon = await pokedex.getPokemonByName(result.name)
 
-      const evolutions = await getSpecieEvolutions(pokemon.species.name)
-
       return {
         ...pokemon,
         like: false,
-        evolutions,
       }
     }),
   )
 }
 
-const offset = parseInt(process.argv[2], 10) || 0
-const limit = parseInt(process.argv[3], 10) || 20
+const unrollEvolutionChain = async (
+  chain: PokeAPI.Chain,
+  stage: number = 0,
+): Promise<{ pokemonId: number; stage: number }[]> => {
+  const species = await pokedex.getPokemonSpeciesByName(chain.species.name)
+  const pokemon = await Promise.all(
+    species.varieties.map(async (v) => {
+      const p = await pokedex.getPokemonByName(v.pokemon.name)
+      return {
+        pokemonId: p.id,
+        stage,
+      }
+    }),
+  )
 
-runScrapper({
-  offset,
-  limit,
-})
-  .then(() => {
+  if (chain.evolves_to.length > 0) {
+    const unrolled = await Promise.all(
+      chain.evolves_to?.map(async (c) => {
+        return unrollEvolutionChain(c, stage + 1)
+      }),
+    ).then((chains) => chains.flat())
+
+    pokemon.push(...unrolled)
+  }
+
+  return pokemon
+}
+
+const downloadImage = async (id: number, path: string) => {
+  const url = new URL(
+    `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/`,
+  )
+
+  url.pathname += `${id}.png`
+
+  const response = await fetch(url.toString())
+
+  if (!response.body || !response.ok) {
+    throw new Error('Failed to download image')
+  }
+
+  // create file if not exists
+  const fd = createWriteStream(path, {
+    flags: 'w',
+  })
+
+  const { body } = response
+  return writeReadableStreamToWritable(body, fd)
+}
+
+export const downloadAllImages = async (options: {
+  offset: number
+  limit: number
+}) => {
+  for (let i = options.offset; i <= options.offset + options.limit; i++) {
+    try {
+      await downloadImage(i, path + `/${i}.png`)
+    } catch (err) {
+      console.error(`Failed to download image for pokemon ${i}`)
+    }
+  }
+}
+
+const run = async () => {
+  if (!fs.existsSync(path)) {
+    const segments = path.split('/')
+
+    for (let i = 0; i < segments.length; i++) {
+      const subpath = segments.slice(0, i + 1).join('/')
+      if (!fs.existsSync(subpath)) {
+        fs.mkdirSync(subpath)
+      }
+    }
+  }
+
+  if (mode === 'pokemon') {
+    return dumpPokemon({
+      offset,
+      limit,
+    })
+  }
+
+  if (mode === 'evolution') {
+    return dumpEvolutions({
+      offset,
+      limit,
+    })
+  }
+
+  if (mode === 'sprite') {
+    return downloadAllImages({
+      offset,
+      limit,
+    })
+  }
+
+  throw new Error(`Invalid mode. Use 'pokemon' , 'evolution' or 'sprite'`)
+}
+
+run()
+  .then((result) => {
+    if (!result) return
+    const timestamp = new Date().toISOString().replace(/:/g, '-')
+
+    console.log('Dumping result...')
+
+    fs.writeFileSync(
+      `${path}/${timestamp}.json`,
+      JSON.stringify(result, null, 2),
+    )
+    console.log('Dumped!')
     process.exit(0)
   })
   .catch((err) => {

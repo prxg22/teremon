@@ -28,13 +28,17 @@ export const PokemonCard = (props: { pokemon: Pokemon }) => {
             className="absolute right-4"
           >
             <button onClick={(e) => e.stopPropagation()}>
-              <img src={iconSrc} alt="like" className="w-7 h-7" />
+              <img
+                src={iconSrc}
+                alt="like"
+                className="pokemon-item__like-button w-7 h-7"
+              />
             </button>
           </fetcher.Form>
         </div>
         <div className="flex flex-col items-center">
           <img
-            src={`sprites/${props.pokemon.id}.png`}
+            src={`/sprites/${props.pokemon.id}.png`}
             alt={props.pokemon.name}
             className="pokemon-item__sprite w-32 h-32"
             loading="lazy"

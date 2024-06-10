@@ -2,7 +2,7 @@ import type { LoaderFunctionArgs } from '@remix-run/node'
 import { NavLink, useLoaderData } from '@remix-run/react'
 
 import { PokemonCard } from '../components/PokemonCard'
-import { list } from '../services/pokemon.server'
+import { listPokemon } from '../services/pokemon.server'
 
 export const loader = async (loaderArgs: LoaderFunctionArgs) => {
   const url = new URL(loaderArgs.request.url)
@@ -13,7 +13,7 @@ export const loader = async (loaderArgs: LoaderFunctionArgs) => {
     limit: 1025,
   }
 
-  const pokemons = await list(params)
+  const pokemons = await listPokemon(params)
 
   return { pokemons }
 }
