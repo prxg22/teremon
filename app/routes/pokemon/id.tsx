@@ -1,20 +1,21 @@
-import type { LoaderFunctionArgs } from 'react-router'
-import { redirect, Form, Link, useLoaderData } from 'react-router'
+import type { LoaderFunctionArgs } from "react-router"
+import { redirect, Form, Link, useLoaderData } from "react-router"
 
 import {
   getEvolutionChain,
   getPokemon,
   toogleLike,
-} from '../services/pokemon.server'
+} from "~/services/pokemon.server"
 
-import { PokemonCard } from '~/components/PokemonCard'
-import { derivateColorFromTypes } from '~/utils'
+import { PokemonCard } from "~/components/PokemonCard"
+import { derivateColorFromTypes } from "~/utils"
+import { Route } from "./+types/id"
 
 export const loader = async (loaderArgs: LoaderFunctionArgs) => {
   const { params } = loaderArgs
   const { pokemonId } = params
 
-  if (!pokemonId) return redirect('/pokemon')
+  if (!pokemonId) return redirect("/pokemon")
 
   const [pokemon, evolutionChain] = await Promise.all([
     getPokemon(Number(pokemonId)),
@@ -32,23 +33,22 @@ export const action = async ({ params }: LoaderFunctionArgs) => {
 
   return null
 }
-const PokemonPage = () => {
-  const loaderData = useLoaderData<typeof loader>()
+const PokemonPage = ({ loaderData }: Route.ComponentProps) => {
   const color = derivateColorFromTypes(loaderData.pokemon.types)
 
   const iconSrc = loaderData.pokemon.like
-    ? '/pokeball-c-icon.png'
-    : '/pokeball-b-icon.png'
+    ? "/pokeball-c-icon.png"
+    : "/pokeball-b-icon.png"
 
   const prefetchers = Array.from({ length: 20 }, (_, i) => {
     const href1 =
       loaderData.pokemon.id - i > 0
         ? `/sprites/${loaderData.pokemon.id - i}.png`
-        : ''
+        : ""
     const href2 =
       loaderData.pokemon.id + i < 1025
         ? `/sprites/${loaderData.pokemon.id + i}.png`
-        : ''
+        : ""
 
     return (
       <>
@@ -74,17 +74,14 @@ const PokemonPage = () => {
     )
   })
 
-  const stages = loaderData.evolutionChain.reduce(
-    (acc, curr) => {
-      if (acc[curr.stage]) {
-        acc[curr.stage].push(curr)
-      } else {
-        acc[curr.stage] = [curr]
-      }
-      return acc
-    },
-    {} as Record<number, typeof loaderData.evolutionChain>,
-  )
+  const stages = loaderData.evolutionChain.reduce((acc, curr) => {
+    if (acc[curr.stage]) {
+      acc[curr.stage].push(curr)
+    } else {
+      acc[curr.stage] = [curr]
+    }
+    return acc
+  }, {} as Record<number, typeof loaderData.evolutionChain>)
 
   return (
     <div
@@ -114,7 +111,7 @@ const PokemonPage = () => {
           </Form>
         </div>
         <img
-          src={`/sprites/${loaderData.pokemon.id}.png` || ''}
+          src={`/sprites/${loaderData.pokemon.id}.png` || ""}
           alt={loaderData.pokemon.name}
           className="pokemon__sprites w-[300px] p-1 rounded-md flex items-center justify-self-center"
         />
@@ -124,7 +121,7 @@ const PokemonPage = () => {
         {Object.entries(stages).map(([stage, pokemons]) => (
           <div key={stage} className="flex flex-col gap-4">
             {pokemons.map((pokemon) => (
-              <Link to={`/pokemon/${pokemon.id}`} key={'ev-' + pokemon.id}>
+              <Link to={`/pokemon/${pokemon.id}`} key={"ev-" + pokemon.id}>
                 <PokemonCard pokemon={pokemon} />
               </Link>
             ))}

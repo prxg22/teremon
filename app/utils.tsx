@@ -1,4 +1,4 @@
-import type { Type } from '~/models/Pokemon'
+import type { Type } from '~/dtos/Pokemon'
 
 export const derivateColorFromTypes = (types: Type[]) => {
   const secondary = types.length - 1

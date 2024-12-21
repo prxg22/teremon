@@ -1,11 +1,11 @@
-import sqlite3 from 'sqlite3'
+import sqlite3 from "sqlite3"
 
-import type { Pokemon, Type, TypeInfo } from '../../models/Pokemon'
-import { connect } from '../db'
+import type { Pokemon, Type, TypeInfo } from "../dtos/Pokemon"
+import { connect } from "~/db"
 
 let db: Awaited<ReturnType<typeof connect>>
 
-type DBPokemon = Omit<Pokemon, 'types'> & {
+type DBPokemon = Omit<Pokemon, "types"> & {
   types: string
   evolutions_to: string
   evolutions_from: string
@@ -14,7 +14,7 @@ type DBPokemon = Omit<Pokemon, 'types'> & {
 export const connectDB = async () => {
   const { DATABASE_URL } = process.env
 
-  if (!DATABASE_URL) throw new Error('DATABASE_URL is not set')
+  if (!DATABASE_URL) throw new Error("DATABASE_URL is not set")
   if (db) return
   try {
     await connect({
@@ -79,14 +79,14 @@ export const createPokemonTypeTable = async () => {
 export const insertPokemon = async (pokemon: Pokemon) => {
   await connectDB()
 
-  const result = await db.get('SELECT * FROM pokemon WHERE id = ?', pokemon.id)
+  const result = await db.get("SELECT * FROM pokemon WHERE id = ?", pokemon.id)
 
   if (!result) {
     await db.run(
-      'INSERT INTO pokemon (id, name, like) VALUES (?, ?, ?)',
+      "INSERT INTO pokemon (id, name, like) VALUES (?, ?, ?)",
       pokemon.id,
       pokemon.name,
-      pokemon.like,
+      pokemon.like
     )
   }
 }
@@ -95,8 +95,8 @@ export const insertType = async (type: Type): Promise<Type> => {
   await connectDB()
 
   let result = await db.get<Type>(
-    'SELECT * FROM type WHERE name = ?',
-    type.name,
+    "SELECT * FROM type WHERE name = ?",
+    type.name
   )
 
   if (result) {
@@ -104,12 +104,12 @@ export const insertType = async (type: Type): Promise<Type> => {
     return result
   }
 
-  console.log('inserting type', type.name)
-  await db.run('INSERT INTO type (name) VALUES (?)', type.name)
+  console.log("inserting type", type.name)
+  await db.run("INSERT INTO type (name) VALUES (?)", type.name)
 
-  result = await db.get<Type>('SELECT * FROM type WHERE name = ?', type.name)
+  result = await db.get<Type>("SELECT * FROM type WHERE name = ?", type.name)
   console.log(`type ${type.name} inserted`, result)
-  if (!result) throw Error('Type was not inserted')
+  if (!result) throw Error("Type was not inserted")
 
   return result
 }
@@ -119,14 +119,14 @@ export const insertPokemonType = async (pokemonId: number, typeId: number) => {
   const pokemonType = await db.get(
     `SELECT * FROM pokemon_type WHERE pokemon_id = ? AND type_id = ?`,
     pokemonId,
-    typeId,
+    typeId
   )
   if (pokemonType) return
 
   await db.run(
-    'INSERT INTO pokemon_type (pokemon_id, type_id) VALUES (?, ?)',
+    "INSERT INTO pokemon_type (pokemon_id, type_id) VALUES (?, ?)",
     pokemonId,
-    typeId,
+    typeId
   )
 }
 
@@ -140,16 +140,16 @@ export const insertPokemonInEvolutionChain = async (params: {
   const evolution = await db.get(
     `SELECT * FROM evolutions WHERE pokemon_id = ? AND chain_id = ?`,
     params.pokemonId,
-    params.chainId,
+    params.chainId
   )
 
   if (evolution) return
 
   await db.run(
-    'INSERT INTO evolutions (pokemon_id, chain_id, stage) VALUES (?, ?, ?)',
+    "INSERT INTO evolutions (pokemon_id, chain_id, stage) VALUES (?, ?, ?)",
     params.pokemonId,
     params.chainId,
-    params.stage,
+    params.stage
   )
 }
 
@@ -161,7 +161,7 @@ export const getAll = async (options?: {
   await connectDB()
 
   const { limit = 20, offset = 0 } = options || {}
-  const whereClause = options?.filter?.liked ? 'WHERE like = 1' : ''
+  const whereClause = options?.filter?.liked ? "WHERE like = 1" : ""
   const results = await db.all<DBPokemon[]>(
     `SELECT 
       pokemon.id, 
@@ -179,7 +179,7 @@ export const getAll = async (options?: {
     GROUP BY pokemon.id, pokemon.name, pokemon.like
     LIMIT ? OFFSET ?`,
     limit,
-    offset,
+    offset
   )
 
   const pokemons = results.map((pokemon) => {
@@ -212,10 +212,10 @@ export const get = async (id: number): Promise<Pokemon> => {
       WHERE pokemon.id = ?
       GROUP BY pokemon.id, pokemon.name, pokemon.like
     `,
-      id,
+      id
     )
 
-    if (!data) throw Error('Pokemon not found')
+    if (!data) throw Error("Pokemon not found")
 
     return {
       id: data.id,
@@ -224,7 +224,7 @@ export const get = async (id: number): Promise<Pokemon> => {
       types: JSON.parse(data.types) as TypeInfo[],
     }
   } catch (e) {
-    throw new Error('Error getting pokemon by id', { cause: e })
+    throw new Error("Error getting pokemon by id", { cause: e })
   }
 }
 
@@ -263,7 +263,7 @@ export const getEvolutionChainByPokemonId = async (id: number) => {
         ON evolutions.pokemon_id = pokemon.id
       WHERE chain_id = (SELECT chain_id FROM evolutions WHERE pokemon_id = ?)
       ORDER BY stage ASC`,
-      id,
+      id
     )
 
     return chain.map((pokemon) => {
@@ -276,7 +276,7 @@ export const getEvolutionChainByPokemonId = async (id: number) => {
       }
     })
   } catch (e) {
-    throw new Error('Error getting evolution chain by pokemon id', {
+    throw new Error("Error getting evolution chain by pokemon id", {
       cause: e,
     })
   }
@@ -285,10 +285,10 @@ export const getEvolutionChainByPokemonId = async (id: number) => {
 export const update = async (pokemon: Pokemon) => {
   const { id, name, like } = pokemon
   await db.run(
-    'UPDATE pokemon SET name = ?, like = ? WHERE id = ?',
+    "UPDATE pokemon SET name = ?, like = ? WHERE id = ?",
     name,
     like,
-    id,
+    id
   )
 }
 

@@ -1,12 +1,13 @@
-import type { LoaderFunctionArgs } from 'react-router'
-import { NavLink, useLoaderData } from 'react-router'
+import type { LoaderFunctionArgs } from "react-router"
+import { NavLink } from "react-router"
 
-import { PokemonCard } from '../components/PokemonCard'
-import { listPokemon } from '../services/pokemon.server'
+import { PokemonCard } from "~/components/PokemonCard"
+import { listPokemon } from "~/services/pokemon.server"
+import { Route } from "./+types/list"
 
 export const loader = async (loaderArgs: LoaderFunctionArgs) => {
   const url = new URL(loaderArgs.request.url)
-  const offset = Number(url.searchParams.get('offset')) || 0
+  const offset = Number(url.searchParams.get("offset")) || 0
 
   const params = {
     offset,
@@ -18,8 +19,7 @@ export const loader = async (loaderArgs: LoaderFunctionArgs) => {
   return { pokemons }
 }
 
-const Index = () => {
-  const loaderData = useLoaderData<typeof loader>()
+const Index = ({ loaderData }: Route.ComponentProps) => {
   return (
     <>
       <div className="p-4 flex justify-center">

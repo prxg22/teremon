@@ -1,6 +1,6 @@
 import { useFetcher } from 'react-router';
 
-import type { Pokemon } from '../models/Pokemon'
+import type { Pokemon } from '../dtos/Pokemon'
 import { derivateColorFromTypes, lpad } from '../utils'
 
 export const PokemonCard = (props: { pokemon: Pokemon }) => {

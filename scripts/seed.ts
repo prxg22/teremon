@@ -11,7 +11,7 @@ import {
   insertPokemonType,
   insertType,
 } from '../app/infra/repository/pokemon'
-import type { Pokemon } from '../app/models/Pokemon'
+import type { Pokemon } from '../app/dtos/Pokemon'
 
 import type { DumpedPokemon } from './scrapper'
 

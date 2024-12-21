@@ -1,4 +1,5 @@
-import * as pokemonRepository from '../infra/repository/pokemon'
+import { Pokemon } from "~/dtos/Pokemon"
+import * as pokemonRepository from "~/repositories/pokemon"
 
 export const listPokemon = async (options?: {
   limit?: number
@@ -10,7 +11,7 @@ export const listPokemon = async (options?: {
 }
 
 export const getPokemon = async (id?: number) => {
-  if (!id) throw new Error('Pokemon name is required')
+  if (!id) throw new Error("Pokemon name is required")
 
   const pokemon = await pokemonRepository.get(id)
 
@@ -18,7 +19,7 @@ export const getPokemon = async (id?: number) => {
 }
 
 export const getEvolutionChain = async (id?: number) => {
-  if (!id) throw new Error('Evolution chain id is required')
+  if (!id) throw new Error("Evolution chain id is required")
 
   const chain = await pokemonRepository.getEvolutionChainByPokemonId(id)
 
@@ -26,7 +27,7 @@ export const getEvolutionChain = async (id?: number) => {
 }
 
 export const toogleLike = async (id: number) => {
-  if (!id) throw new Error('Pokemon id is required')
+  if (!id) throw new Error("Pokemon id is required")
 
   const pokemon = await pokemonRepository.get(id)
 
