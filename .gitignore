@@ -1,11 +1,13 @@
 pokemon-dump.json
-node_modules
+.env
 
+node_modules/
 .cache/
 build/
 public/build/
-.env
-.pokemon
-.sqlite
+.pokemon/
+.sqlite/
 scripts/.dump
+.react-router/
+.vscode/
 .react-router/
