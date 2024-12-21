@@ -10,7 +10,7 @@ export const loader = async (loaderArgs: LoaderFunctionArgs) => {
 
   const params = {
     offset,
-    limit: 1025,
+    limit: 200000,
   }
 
   const pokemons = await listPokemon(params)
@@ -28,7 +28,7 @@ const Index = () => {
             <li key={pokemon.name}>
               <NavLink
                 to={`/pokemon/${pokemon.id}`}
-                unstable_viewTransition
+                viewTransition
                 prefetch="intent"
               >
                 <PokemonCard pokemon={pokemon} />

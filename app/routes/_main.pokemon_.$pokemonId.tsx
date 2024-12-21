@@ -94,7 +94,7 @@ const PokemonPage = () => {
       <header className="flex self-stretch mb-3 ">
         <Link
           to="/pokemon"
-          unstable_viewTransition
+          viewTransition
           className="p-2 rounded-full w-[32px] h-[32px] text-sm drop-shadow-lg"
           prefetch="viewport"
         >
