@@ -1,4 +1,3 @@
-import { Pokemon } from "~/dtos/Pokemon"
 import * as pokemonRepository from "~/repositories/pokemon"
 
 export const listPokemon = async (options?: {

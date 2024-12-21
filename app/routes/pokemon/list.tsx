@@ -3,7 +3,7 @@ import { NavLink } from "react-router"
 
 import { PokemonCard } from "~/components/PokemonCard"
 import { listPokemon } from "~/services/pokemon.server"
-import { Route } from "./+types/list"
+import type { Route } from "./+types/list"
 
 export const loader = async (loaderArgs: LoaderFunctionArgs) => {
   const url = new URL(loaderArgs.request.url)

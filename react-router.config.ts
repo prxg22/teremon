@@ -1,8 +1,7 @@
-import { Config } from '@react-router/dev/config'
-import { TbUserEdit } from 'react-icons/tb'
+import { Config } from "@react-router/dev/config"
 
 export default {
   future: {
-    unstable_optimizeDeps: true
-  }
+    unstable_optimizeDeps: true,
+  },
 } satisfies Config

@@ -1,4 +1,4 @@
-import fs from 'fs/promises'
+import fs from "fs/promises"
 
 import {
   connectDB,
@@ -10,13 +10,13 @@ import {
   insertPokemonInEvolutionChain,
   insertPokemonType,
   insertType,
-} from '../app/infra/repository/pokemon'
-import type { Pokemon } from '../app/dtos/Pokemon'
+} from "../app/repositories/pokemon"
+import type { Pokemon } from "../app/dtos/Pokemon"
 
-import type { DumpedPokemon } from './scrapper'
+import type { DumpedPokemon } from "./scrapper"
 
 const mode = process.argv[2] // 'pokemon' | 'evoultion
-const path = process.argv[3] ?? './scripts/.dump/' + mode
+const path = process.argv[3] ?? "./scripts/.dump/" + mode
 
 export const seedPokemon = async (seed?: { pokemons?: Pokemon[] }) => {
   await connectDB()
@@ -70,12 +70,12 @@ const getPokemonFromDump = async () => {
   const dumps = await fs.readdir(path)
 
   if (!dumps.length) {
-    throw new Error('No dump file found')
+    throw new Error("No dump file found")
   }
 
   const pokemons: DumpedPokemon[] = []
   for (const dump of dumps) {
-    const dumpFile = await fs.readFile(`${path}/${dump}`, 'utf-8')
+    const dumpFile = await fs.readFile(`${path}/${dump}`, "utf-8")
 
     pokemons.push(...JSON.parse(dumpFile))
   }
@@ -87,12 +87,12 @@ const getEvolutionsFromDump = async () => {
   const dumps = await fs.readdir(path)
 
   if (!dumps.length) {
-    throw new Error('No dump file found')
+    throw new Error("No dump file found")
   }
 
   const evolutions = []
   for (const dump of dumps) {
-    const dumpFile = await fs.readFile(`${path}/${dump}`, 'utf-8')
+    const dumpFile = await fs.readFile(`${path}/${dump}`, "utf-8")
 
     evolutions.push(...JSON.parse(dumpFile))
   }
@@ -101,13 +101,13 @@ const getEvolutionsFromDump = async () => {
 }
 
 const run = async () => {
-  if (mode === 'pokemon') {
+  if (mode === "pokemon") {
     const pokemons = await getPokemonFromDump()
 
     return seedPokemon({ pokemons })
   }
 
-  if (mode === 'evolution') {
+  if (mode === "evolution") {
     const evolutions = await getEvolutionsFromDump()
 
     return seedEvolution({ evolutions })

@@ -1,9 +1,9 @@
-import fs, { createWriteStream } from 'fs'
+import fs, { createWriteStream } from "fs"
 
-import { writeReadableStreamToWritable } from '@react-router/node';
-import PokeAPI from 'pokedex-promise-v2'
+import { writeReadableStreamToWritable } from "@react-router/node"
+import PokeAPI from "pokedex-promise-v2"
 
-import { getAll } from '../app/infra/repository/pokemon'
+import { getAll } from "../app/repositories/pokemon"
 
 const pokedex = new PokeAPI()
 
@@ -14,10 +14,10 @@ export interface DumpedPokemon extends PokeAPI.Pokemon {
 const mode = process.argv[2] // 'pokemon' | 'evoultion' | 'sprite'
 const offset = process.argv[3] ? parseInt(process.argv[3], 10) : 0 // offset
 const limit = process.argv[4] ? parseInt(process.argv[4], 10) : 20 // limit
-const path = process.argv[5] ?? './scripts/.dump/' + mode
+const path = process.argv[5] ?? "./scripts/.dump/" + mode
 
 const dumpPokemon = async (options: { offset: number; limit: number }) => {
-  let pokemons = await getPokemonsFromAPI(options)
+  const pokemons = await getPokemonsFromAPI(options)
 
   const likes = await getAll({ filter: { liked: true } })
 
@@ -42,7 +42,7 @@ const dumpEvolutions = async (options: { offset: number; limit: number }) => {
     return ec.map((c) => ({ ...c, chainId: chain.id }))
   })
 
-  console.log('Dumping evolutions...')
+  console.log("Dumping evolutions...")
 
   return Promise.all(chains)
 }
@@ -51,7 +51,7 @@ const getPokemonsFromAPI = async (options: {
   offset: number
   limit: number
 }): Promise<DumpedPokemon[]> => {
-  let { results } = await pokedex.getPokemonsList({
+  const { results } = await pokedex.getPokemonsList({
     cacheLimit: 20000,
     limit: options.limit,
     offset: options.offset,
@@ -67,13 +67,13 @@ const getPokemonsFromAPI = async (options: {
         ...pokemon,
         like: false,
       }
-    }),
+    })
   )
 }
 
 const unrollEvolutionChain = async (
   chain: PokeAPI.Chain,
-  stage: number = 0,
+  stage: number = 0
 ): Promise<{ pokemonId: number; stage: number }[]> => {
   const species = await pokedex.getPokemonSpeciesByName(chain.species.name)
   const pokemon = await Promise.all(
@@ -83,14 +83,14 @@ const unrollEvolutionChain = async (
         pokemonId: p.id,
         stage,
       }
-    }),
+    })
   )
 
   if (chain.evolves_to.length > 0) {
     const unrolled = await Promise.all(
       chain.evolves_to?.map(async (c) => {
         return unrollEvolutionChain(c, stage + 1)
-      }),
+      })
     ).then((chains) => chains.flat())
 
     pokemon.push(...unrolled)
@@ -101,7 +101,7 @@ const unrollEvolutionChain = async (
 
 const downloadImage = async (id: number, path: string) => {
   const url = new URL(
-    `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/`,
+    `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/`
   )
 
   url.pathname += `${id}.png`
@@ -109,12 +109,12 @@ const downloadImage = async (id: number, path: string) => {
   const response = await fetch(url.toString())
 
   if (!response.body || !response.ok) {
-    throw new Error('Failed to download image')
+    throw new Error("Failed to download image")
   }
 
   // create file if not exists
   const fd = createWriteStream(path, {
-    flags: 'w',
+    flags: "w",
   })
 
   const { body } = response
@@ -130,37 +130,38 @@ export const downloadAllImages = async (options: {
       await downloadImage(i, path + `/${i}.png`)
     } catch (err) {
       console.error(`Failed to download image for pokemon ${i}`)
+      console.error(err)
     }
   }
 }
 
 const run = async () => {
   if (!fs.existsSync(path)) {
-    const segments = path.split('/')
+    const segments = path.split("/")
 
     for (let i = 0; i < segments.length; i++) {
-      const subpath = segments.slice(0, i + 1).join('/')
+      const subpath = segments.slice(0, i + 1).join("/")
       if (!fs.existsSync(subpath)) {
         fs.mkdirSync(subpath)
       }
     }
   }
 
-  if (mode === 'pokemon') {
+  if (mode === "pokemon") {
     return dumpPokemon({
       offset,
       limit,
     })
   }
 
-  if (mode === 'evolution') {
+  if (mode === "evolution") {
     return dumpEvolutions({
       offset,
       limit,
     })
   }
 
-  if (mode === 'sprite') {
+  if (mode === "sprite") {
     return downloadAllImages({
       offset,
       limit,
@@ -173,15 +174,15 @@ const run = async () => {
 run()
   .then((result) => {
     if (!result) return
-    const timestamp = new Date().toISOString().replace(/:/g, '-')
+    const timestamp = new Date().toISOString().replace(/:/g, "-")
 
-    console.log('Dumping result...')
+    console.log("Dumping result...")
 
     fs.writeFileSync(
       `${path}/${timestamp}.json`,
-      JSON.stringify(result, null, 2),
+      JSON.stringify(result, null, 2)
     )
-    console.log('Dumped!')
+    console.log("Dumped!")
     process.exit(0)
   })
   .catch((err) => {

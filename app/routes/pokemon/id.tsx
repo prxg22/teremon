@@ -1,6 +1,6 @@
 import type { LoaderFunctionArgs } from "react-router"
-import { redirect, Form, Link, useLoaderData } from "react-router"
-
+import { redirect, Form, Link } from "react-router"
+import type { Route } from "./+types/id"
 import {
   getEvolutionChain,
   getPokemon,
@@ -9,7 +9,6 @@ import {
 
 import { PokemonCard } from "~/components/PokemonCard"
 import { derivateColorFromTypes } from "~/utils"
-import { Route } from "./+types/id"
 
 export const loader = async (loaderArgs: LoaderFunctionArgs) => {
   const { params } = loaderArgs
