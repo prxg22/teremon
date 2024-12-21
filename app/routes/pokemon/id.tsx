@@ -1,37 +1,24 @@
-import type { LoaderFunctionArgs } from "react-router"
-import { redirect, Form, Link } from "react-router"
+import { Form, Link } from "react-router"
 import type { Route } from "./+types/id"
-import {
-  getEvolutionChain,
-  getPokemon,
-  toogleLike,
-} from "~/services/pokemon.server"
+// import { toogleLike } from "~/services/pokemon.server"
 
 import { PokemonCard } from "~/components/PokemonCard"
 import { derivateColorFromTypes } from "~/utils"
+import { getPokemonController } from "~/modules/pokemon/controllers/getPokemon.controller"
+import { updatePokemonLikeController } from "~/modules/pokemon/controllers/updatePokemonLike.controller"
 
-export const loader = async (loaderArgs: LoaderFunctionArgs) => {
-  const { params } = loaderArgs
-  const { pokemonId } = params
+export const loader = async (loaderArgs: Route.LoaderArgs) => {
+  const { pokemon, evolutions } = getPokemonController(loaderArgs)
 
-  if (!pokemonId) return redirect("/pokemon")
-
-  const [pokemon, evolutionChain] = await Promise.all([
-    getPokemon(Number(pokemonId)),
-    getEvolutionChain(Number(pokemonId)),
-  ])
-
-  return { pokemon, evolutionChain }
+  return { pokemon, evolutions }
 }
 
-export const action = async ({ params }: LoaderFunctionArgs) => {
-  const { pokemonId } = params
-  if (!pokemonId) return
-
-  toogleLike(Number(pokemonId))
+export const action = async (actionArgs: Route.ActionArgs) => {
+  await updatePokemonLikeController(actionArgs)
 
   return null
 }
+
 const PokemonPage = ({ loaderData }: Route.ComponentProps) => {
   const color = derivateColorFromTypes(loaderData.pokemon.types)
 
@@ -73,14 +60,14 @@ const PokemonPage = ({ loaderData }: Route.ComponentProps) => {
     )
   })
 
-  const stages = loaderData.evolutionChain.reduce((acc, curr) => {
+  const stages = loaderData.evolutions.reduce((acc, curr) => {
     if (acc[curr.stage]) {
       acc[curr.stage].push(curr)
     } else {
       acc[curr.stage] = [curr]
     }
     return acc
-  }, {} as Record<number, typeof loaderData.evolutionChain>)
+  }, {} as Record<number, typeof loaderData.evolutions>)
 
   return (
     <div
@@ -117,11 +104,14 @@ const PokemonPage = ({ loaderData }: Route.ComponentProps) => {
       </section>
 
       <section className="grid grid-flow-col gap-4 max-w-[75%] justify-center">
-        {Object.entries(stages).map(([stage, pokemons]) => (
+        {Object.entries(stages).map(([stage, evolutions]) => (
           <div key={stage} className="flex flex-col gap-4">
-            {pokemons.map((pokemon) => (
-              <Link to={`/pokemon/${pokemon.id}`} key={"ev-" + pokemon.id}>
-                <PokemonCard pokemon={pokemon} />
+            {evolutions.map((evolution) => (
+              <Link
+                to={`/pokemon/${evolution.pokemonId}`}
+                key={"ev-" + evolution.pokemonId}
+              >
+                <PokemonCard pokemon={evolution.pokemon} />
               </Link>
             ))}
           </div>

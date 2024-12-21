@@ -1,68 +1,47 @@
 import fs from "fs/promises"
 
-import {
-  connectDB,
-  createEvolutionTable,
-  createPokemonTable,
-  createPokemonTypeTable,
-  createTypeTable,
-  insertPokemon,
-  insertPokemonInEvolutionChain,
-  insertPokemonType,
-  insertType,
-} from "../app/repositories/pokemon"
-import type { Pokemon } from "../app/dtos/Pokemon"
+import "~/db"
 
 import type { DumpedPokemon } from "./scrapper"
+import { addPokemonToEvolutionsChain } from "~/modules/pokemon/services/evolutions.service"
+import { addPokemonToEvolutionChainSchema } from "~/modules/pokemon/dtos/addPokemonToEvolutionChain.dto"
+import { createPokemon } from "~/modules/pokemon/services/pokemon.service"
+import {
+  CreatePokemonDto,
+  createPokemonSchema,
+} from "~/modules/pokemon/dtos/createPokemon.dto"
 
 const mode = process.argv[2] // 'pokemon' | 'evoultion
 const path = process.argv[3] ?? "./scripts/.dump/" + mode
 
-export const seedPokemon = async (seed?: { pokemons?: Pokemon[] }) => {
-  await connectDB()
-
-  await Promise.all([
-    createPokemonTable(),
-    createTypeTable(),
-    createPokemonTypeTable(),
-  ])
-
+export const seedPokemon = async (seed?: { pokemons?: CreatePokemonDto[] }) => {
   if (!seed?.pokemons?.length) return
 
   for (const pokemon of seed.pokemons) {
-    await insertPokemon(pokemon)
-    for (const t of pokemon.types) {
-      const type = await insertType(t)
-      await insertPokemonType(pokemon.id, type.id)
-    }
+    createPokemonSchema.parse(pokemon)
+    createPokemon(pokemon)
   }
 }
 
 export const seedEvolution = async (seed?: {
   evolutions?: { chainId: number; stage: number; pokemonId: number }[][]
 }) => {
-  await connectDB()
-
-  await createEvolutionTable()
-
   if (!seed?.evolutions?.length) return
 
   for (const chain of seed.evolutions) {
     for (const evo of chain) {
-      await insertPokemonInEvolutionChain(evo)
+      addPokemonToEvolutionChainSchema.parse(evo)
+      addPokemonToEvolutionsChain(evo)
     }
   }
 }
 
-const parsePokemon = (pokemon: DumpedPokemon): Pokemon => {
+const parsePokemon = (pokemon: DumpedPokemon): CreatePokemonDto => {
   return {
     id: pokemon.id,
     name: pokemon.name,
     like: pokemon.like,
-    types: pokemon.types.map(({ slot, type }) => ({
-      id: slot,
-      name: type.name,
-    })),
+    types: pokemon.types.map(({ type }) => type.name),
   }
 }
 
@@ -73,14 +52,15 @@ const getPokemonFromDump = async () => {
     throw new Error("No dump file found")
   }
 
-  const pokemons: DumpedPokemon[] = []
+  const pokemons: CreatePokemonDto[] = []
+
   for (const dump of dumps) {
     const dumpFile = await fs.readFile(`${path}/${dump}`, "utf-8")
-
-    pokemons.push(...JSON.parse(dumpFile))
+    const data = JSON.parse(dumpFile).map(parsePokemon)
+    pokemons.push(...data)
   }
 
-  return pokemons.map(parsePokemon)
+  return pokemons
 }
 
 const getEvolutionsFromDump = async () => {

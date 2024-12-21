@@ -1,22 +1,12 @@
-import type { LoaderFunctionArgs } from "react-router"
 import { NavLink } from "react-router"
 
 import { PokemonCard } from "~/components/PokemonCard"
-import { listPokemon } from "~/services/pokemon.server"
 import type { Route } from "./+types/list"
+import { listPokemonController } from "~/modules/pokemon/controllers/listPokemon.controller"
 
-export const loader = async (loaderArgs: LoaderFunctionArgs) => {
-  const url = new URL(loaderArgs.request.url)
-  const offset = Number(url.searchParams.get("offset")) || 0
-
-  const params = {
-    offset,
-    limit: 200000,
-  }
-
-  const pokemons = await listPokemon(params)
-
-  return { pokemons }
+export const loader = async (loaderArgs: Route.LoaderArgs) => {
+  const pokemon = await listPokemonController(loaderArgs)
+  return { pokemon }
 }
 
 const Index = ({ loaderData }: Route.ComponentProps) => {
@@ -24,7 +14,7 @@ const Index = ({ loaderData }: Route.ComponentProps) => {
     <>
       <div className="p-4 flex justify-center">
         <ul className="grid xl:lg:grid-cols-6 md:sm:grid-cols-3 grid-cols-1 gap-6 p-4">
-          {loaderData.pokemons.map((pokemon) => (
+          {loaderData.pokemon.map((pokemon) => (
             <li key={pokemon.name}>
               <NavLink
                 to={`/pokemon/${pokemon.id}`}

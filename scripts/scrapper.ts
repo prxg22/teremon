@@ -2,8 +2,7 @@ import fs, { createWriteStream } from "fs"
 
 import { writeReadableStreamToWritable } from "@react-router/node"
 import PokeAPI from "pokedex-promise-v2"
-
-import { getAll } from "../app/repositories/pokemon"
+import { listPokemon } from "~/modules/pokemon/services/pokemon.service"
 
 const pokedex = new PokeAPI()
 
@@ -19,11 +18,11 @@ const path = process.argv[5] ?? "./scripts/.dump/" + mode
 const dumpPokemon = async (options: { offset: number; limit: number }) => {
   const pokemons = await getPokemonsFromAPI(options)
 
-  const likes = await getAll({ filter: { liked: true } })
+  const liked = listPokemon({ filter: { like: true } })
 
   return pokemons.map((p) => ({
     ...p,
-    like: likes.some((l) => l.id === p.id),
+    like: liked.some((l) => l.id === p.id),
   }))
 }
 

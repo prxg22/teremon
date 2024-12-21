@@ -1,7 +1,7 @@
-import { useFetcher } from 'react-router';
+import { useFetcher } from "react-router"
 
-import type { Pokemon } from '../dtos/Pokemon'
-import { derivateColorFromTypes, lpad } from '../utils'
+import type { Pokemon } from "../types/Pokemon"
+import { derivateColorFromTypes, lpad } from "../utils"
 
 export const PokemonCard = (props: { pokemon: Pokemon }) => {
   const color = derivateColorFromTypes(props.pokemon.types)
@@ -9,8 +9,8 @@ export const PokemonCard = (props: { pokemon: Pokemon }) => {
   const fetcher = useFetcher()
 
   const iconSrc = props.pokemon.like
-    ? '/pokeball-c-icon.png'
-    : '/pokeball-b-icon.png'
+    ? "/pokeball-c-icon.png"
+    : "/pokeball-b-icon.png"
 
   return (
     <div className={`group cursor-pointer relative`}>
@@ -27,7 +27,11 @@ export const PokemonCard = (props: { pokemon: Pokemon }) => {
             method="post"
             className="absolute right-4"
           >
-            <button onClick={(e) => e.stopPropagation()}>
+            <button
+              name="like"
+              value={String(!props.pokemon.like)}
+              onClick={(e) => e.stopPropagation()}
+            >
               <img
                 src={iconSrc}
                 alt="like"

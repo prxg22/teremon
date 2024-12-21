@@ -1,12 +1,21 @@
-import type { Type } from '~/dtos/Pokemon'
+import { z } from "zod"
+import type { Type } from "~/types/Type"
+
+export const castStringToBoolean = z.preprocess((val) => {
+  if (typeof val === "string") {
+    if (val.toLowerCase() === "true") return true
+    if (val.toLowerCase() === "false") return false
+  }
+  return val
+}, z.boolean())
 
 export const derivateColorFromTypes = (types: Type[]) => {
   const secondary = types.length - 1
   return `from-poke-${types[0].name}-300 to-poke-${types[secondary].name}-300`
 }
 
-export const lpad = (n: number, width: number, z = '0') => {
-  const nStr = n + ''
+export const lpad = (n: number, width: number, z = "0") => {
+  const nStr = n + ""
   return nStr.length >= width
     ? nStr
     : new Array(width - nStr.length + 1).join(z) + nStr
