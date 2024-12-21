@@ -1,8 +1,8 @@
 import { data } from "react-router"
 import { Route } from ".react-router/types/app/routes/pokemon/+types/id"
 import { getPokemonSchema } from "../dtos/getPokemon.dto"
-import { getPokemonHandler } from "../handlers/getPokemon.handler"
-import { getPokemonEvolutionsChainHandler } from "../handlers/getPokemonEvolutionsChain.handler"
+import { getPokemon } from "../services/pokemon.service"
+import { getPokemonEvolutionsChain } from "../services/evolutions.service"
 
 export const getPokemonController = (loaderArgs: Route.LoaderArgs) => {
   const params = { id: loaderArgs.params.pokemonId }
@@ -20,7 +20,7 @@ export const getPokemonController = (loaderArgs: Route.LoaderArgs) => {
     )
   }
 
-  const pokemon = getPokemonHandler(parseResult.data)
+  const pokemon = getPokemon(parseResult.data)
   if (!pokemon)
     throw data(
       {
@@ -31,7 +31,7 @@ export const getPokemonController = (loaderArgs: Route.LoaderArgs) => {
       }
     )
 
-  const evolutions = getPokemonEvolutionsChainHandler(parseResult.data)
+  const evolutions = getPokemonEvolutionsChain(parseResult.data)
 
   return {
     pokemon,

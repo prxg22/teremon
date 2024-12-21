@@ -1,7 +1,7 @@
 import { listPokemonSchema } from "../dtos/listPokemon.dto"
 import { data } from "react-router"
-import { listPokemonHandler } from "../handlers/listPokemon.handler"
 import { Route } from ".react-router/types/app/routes/pokemon/+types/list"
+import { listPokemon } from "../services/pokemon.service"
 
 export const listPokemonController = async (loaderArgs: Route.LoaderArgs) => {
   const url = new URL(loaderArgs.request.url)
@@ -22,5 +22,5 @@ export const listPokemonController = async (loaderArgs: Route.LoaderArgs) => {
     )
   }
 
-  return listPokemonHandler(parseResult.data)
+  return listPokemon(parseResult.data)
 }

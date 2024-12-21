@@ -1,7 +1,7 @@
 import { data } from "react-router"
 import { Route } from ".react-router/types/app/routes/pokemon/+types/id"
 import { updatePokemonSchema } from "../dtos/updatePokemon.dto"
-import { updatePokemonHandler } from "../handlers/updatePokemon.handler"
+import { updatePokemon } from "../services/pokemon.service"
 
 export const updatePokemonLikeController = async (
   actionArgs: Route.ActionArgs
@@ -24,6 +24,5 @@ export const updatePokemonLikeController = async (
     )
   }
 
-  console.log(params, parseResult.data)
-  return updatePokemonHandler(parseResult.data)
+  return updatePokemon(parseResult.data)
 }
