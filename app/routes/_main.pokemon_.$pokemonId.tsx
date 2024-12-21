@@ -1,6 +1,5 @@
-import type { LoaderFunctionArgs } from '@remix-run/node'
-import { redirect } from '@remix-run/node'
-import { Form, Link, useLoaderData } from '@remix-run/react'
+import type { LoaderFunctionArgs } from 'react-router'
+import { redirect, Form, Link, useLoaderData } from 'react-router'
 
 import {
   getEvolutionChain,

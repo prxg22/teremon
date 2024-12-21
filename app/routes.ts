@@ -1,4 +1,4 @@
-import { index, layout, route } from '@remix-run/route-config'
+import { index, layout, route, RouteConfig } from '@react-router/dev/routes';
 
 export default [
   index('./routes/_index.tsx'),
@@ -7,4 +7,4 @@ export default [
     route('/pokemon/:pokemonId', './routes/_main.pokemon_.$pokemonId.tsx'),
     route('/pokemon/liked', './routes/_main.pokemon_.liked.tsx'),
   ]),
-]
+] satisfies RouteConfig

@@ -2,13 +2,22 @@
   "include": [
     "env.d.ts",
     "**/*.ts",
-    "**/*.tsx"
+    "**/*.tsx",
+    ".react-router/types/**/*",
   ],
   "compilerOptions": {
+    "rootDirs": [
+      ".",
+      "./.react-router/types"
+    ],
+    "types": [
+      "@react-router/node",
+      "vite/client"
+    ],
     "lib": [
       "DOM",
       "DOM.Iterable",
-      "ES2022"
+      "ES2022",
     ],
     "module": "ESNext",
     "isolatedModules": true,

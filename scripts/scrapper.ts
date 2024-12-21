@@ -1,6 +1,6 @@
 import fs, { createWriteStream } from 'fs'
 
-import { writeReadableStreamToWritable } from '@remix-run/node'
+import { writeReadableStreamToWritable } from '@react-router/node';
 import PokeAPI from 'pokedex-promise-v2'
 
 import { getAll } from '../app/infra/repository/pokemon'

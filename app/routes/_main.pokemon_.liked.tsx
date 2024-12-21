@@ -1,6 +1,5 @@
-import type { LoaderFunctionArgs } from '@remix-run/node'
-import { json } from '@remix-run/node'
-import { Link, useLoaderData } from '@remix-run/react'
+import type { LoaderFunctionArgs } from 'react-router'
+import { Link, useLoaderData } from 'react-router'
 
 import { PokemonCard } from '../components/PokemonCard'
 import { getAll } from '../infra/repository/pokemon'
@@ -8,7 +7,7 @@ import { getAll } from '../infra/repository/pokemon'
 export const loader = async (loaderArgs: LoaderFunctionArgs) => {
   const pokemons = await getAll({ filter: { liked: true } })
 
-  return json({ pokemons })
+  return { pokemons }
 }
 
 const Index = () => {
